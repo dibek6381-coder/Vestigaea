@@ -3,6 +3,7 @@ Tests for core ECS and fixed timestep functionality.
 """
 import pytest
 from vestigaea.core.ecs import World, System, Entity
+from vestigaea.core.events import EventBus
 from vestigaea.core.timer import FixedTimestep
 
 def test_entity_creation():
@@ -91,6 +92,24 @@ def test_fixed_timestep():
     assert updates == 6
     assert timer.accumulator == pytest.approx(0.01, abs=1e-6)
 
+
+def test_fixed_timestep_reset_and_alpha():
+    """Additional guards for FixedTimestep helpers."""
+    timer = FixedTimestep(dt=0.5)
+
+    timer.update(0.25, lambda _: None)
+    assert timer.alpha() == pytest.approx(0.5)
+
+    timer.reset()
+    assert timer.accumulator == 0
+    assert timer.alpha() == 0.0
+
+    with pytest.raises(ValueError):
+        FixedTimestep(0)
+
+    with pytest.raises(ValueError):
+        timer.update(-0.1, lambda _: None)
+
 def test_entity_queries():
     """Test querying entities with specific components."""
     world = World()
@@ -117,6 +136,36 @@ def test_entity_queries():
     stationary = world.get_entities_with("position")
     assert len(stationary) == 3
     assert e2.id in stationary
+
+
+def test_event_bus_helpers():
+    """Ensure EventBus handles duplicate subscriptions and clearing."""
+    bus = EventBus()
+    received = []
+
+    def callback(data):
+        received.append(data)
+
+    bus.subscribe("test", callback)
+    bus.subscribe("test", callback)  # Duplicate should be ignored
+    bus.publish("test", 1)
+    assert received == [1]
+
+    bus.unsubscribe("test", callback)
+    bus.publish("test", 2)
+    assert received == [1]  # Unsubscribed
+
+    # Unsubscribing again should not error
+    bus.unsubscribe("test", callback)
+
+    bus.subscribe("another", callback)
+    assert len(tuple(bus.iter_subscribers("another"))) == 1
+    bus.clear("another")
+    assert not tuple(bus.iter_subscribers("another"))
+
+    bus.subscribe("test", callback)
+    bus.clear()
+    assert not tuple(bus.iter_subscribers("test"))
 
 def test_system_dependencies():
     """Test systems interacting with shared entities."""
@@ -154,3 +203,4 @@ def test_system_dependencies():
     pos = world.get_component(entity.id, "position")
     assert pos["x"] == 100  # Clamped at boundary
     assert pos["y"] == 0
+

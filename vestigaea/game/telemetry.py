@@ -1,9 +1,10 @@
-"""
-Telemetry recording and fitness calculation for Vestigaea MVP.
-"""
-from typing import List, Dict, Any
-from dataclasses import dataclass, field
+"""Telemetry recording and fitness calculation for Vestigaea MVP."""
+
+from __future__ import annotations
+
 import time
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
 
 from vestigaea.core.ecs import System
 from vestigaea.core.events import bus
@@ -27,26 +28,42 @@ class TelemetrySystem(System):
         bus.subscribe("injury", self.record_injury)
         bus.subscribe("spotted_predator", self.record_predator)
     
-    def record_forage(self, data):
+    def record_forage(self, data: Dict[str, Any]) -> None:
         """Record successful foraging."""
-        self.events.append(TelemetryEvent(
-            name="forage",
-            data={"cal": data["calories"]}
-        ))
-    
-    def record_injury(self, data):
+        self.events.append(
+            TelemetryEvent(
+                name="forage",
+                data={"cal": data["calories"]},
+            )
+        )
+
+    def record_injury(self, data: Dict[str, Any]) -> None:
         """Record injury from predator."""
-        self.events.append(TelemetryEvent(
-            name="injury",
-            data={"severity": data["severity"]}
-        ))
-    
-    def record_predator(self, data):
+        self.events.append(
+            TelemetryEvent(
+                name="injury",
+                data={"severity": data["severity"]},
+            )
+        )
+
+    def record_predator(self, data: Dict[str, Any]) -> None:
         """Record predator sighting."""
-        self.events.append(TelemetryEvent(
-            name="spotted_predator",
-            data={"distance": data["distance"]}
-        ))
+        self.events.append(
+            TelemetryEvent(
+                name="spotted_predator",
+                data={"distance": data["distance"]},
+            )
+        )
+
+    def record_time_alive(self, seconds: float) -> None:
+        """Store a dedicated event capturing the run duration."""
+
+        self.events.append(
+            TelemetryEvent(
+                name="time_alive",
+                data={"seconds": seconds},
+            )
+        )
     
     def calculate_fitness(self) -> float:
         """
@@ -78,8 +95,9 @@ class TelemetrySystem(System):
         fitness += 2.0 * predator_spots
         
         return max(0.0, fitness)
-    
-    def clear(self):
+
+    def clear(self) -> None:
         """Reset telemetry for a new run."""
         self.events.clear()
         self.run_start_time = time.time()
+
