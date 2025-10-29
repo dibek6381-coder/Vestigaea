@@ -2,7 +2,7 @@
 Lightweight Entity Component System for Vestigaea MVP.
 Entities are just IDs, components are dicts, systems are classes with update(dt).
 """
-from typing import Dict, Any, Set, Optional
+from typing import Dict, Any, Set, Optional, List
 from dataclasses import dataclass, field
 
 @dataclass
@@ -17,7 +17,8 @@ class World:
         self._next_id = 1
         self._entities: Dict[int, Entity] = {}
         self._components: Dict[str, Dict[int, Dict[str, Any]]] = {}
-        self._systems: Set['System'] = set()
+        # Maintain system registration order to guarantee deterministic updates.
+        self._systems: List['System'] = []
     
     def create_entity(self) -> Entity:
         """Create a new entity with a unique ID."""
@@ -53,7 +54,10 @@ class World:
 
     def register_system(self, system: 'System') -> None:
         """Add a system to be updated each frame."""
-        self._systems.add(system)
+        if system in self._systems:
+            return
+
+        self._systems.append(system)
         system.world = self
 
     def update(self, dt: float) -> None:
