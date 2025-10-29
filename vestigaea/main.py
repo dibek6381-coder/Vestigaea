@@ -11,7 +11,7 @@ from pathlib import Path
 from vestigaea.core.timer import FixedTimestep
 from vestigaea.core.ecs import World
 from vestigaea.core.events import bus
-from game.entities import create_player, create_predator
+from vestigaea.game.entities import create_player, create_predator
 
 # Constants
 SCREEN_WIDTH = 1024  # 64 tiles * 16 pixels
@@ -46,15 +46,15 @@ class Game:
         self.max_run_time = 120  # 120 seconds max per run
         self.cause_of_death = None
         
-        # Import systems
-        from game.world import WorldSystem
-        from game.perception import VisionSystem
-        from game.verbs import VerbSystem
-        from game.ai import UtilityAI
-        from game.telemetry import TelemetrySystem
-        from game.evolution import Evolution
-        from ui.hud import HUD
-        from ui.postrun import PostRunScreen
+        # Import systems lazily to avoid circular import issues on start-up
+        from vestigaea.game.world import WorldSystem
+        from vestigaea.game.perception import VisionSystem
+        from vestigaea.game.verbs import VerbSystem
+        from vestigaea.game.ai import UtilityAI
+        from vestigaea.game.telemetry import TelemetrySystem
+        from vestigaea.game.evolution import Evolution
+        from vestigaea.ui.hud import HUD
+        from vestigaea.ui.postrun import PostRunScreen
         
         # Initialize systems
         self.world_system = WorldSystem(WORLD_SIZE, WORLD_SIZE)
@@ -63,41 +63,22 @@ class Game:
         self.ai_system = UtilityAI()
         self.telemetry_system = TelemetrySystem()
         
-        self.world.register_system(self.world_system)
-        self.world.register_system(self.vision_system)
-        self.world.register_system(self.verb_system)
-        self.world.register_system(self.ai_system)
-        
+        for system in (
+            self.world_system,
+            self.vision_system,
+            self.verb_system,
+            self.ai_system,
+        ):
+            self.world.register_system(system)
+
         # Load initial genome and create entities
         self.genome = self.load_genome()
         self.evolution = Evolution(Path(__file__).parent / "data")
-        
+
         # UI components
         self.hud = HUD(SCREEN_WIDTH, SCREEN_HEIGHT)
         self.post_run = PostRunScreen(SCREEN_WIDTH, SCREEN_HEIGHT)
-        
-        # Create initial entities
-        self.spawn_entities()
-        
-        self.world_system = WorldSystem(WORLD_SIZE, WORLD_SIZE)
-        self.vision_system = VisionSystem()
-        self.verb_system = VerbSystem()
-        self.ai_system = UtilityAI()
-        self.telemetry_system = TelemetrySystem()
-        
-        self.world.register_system(self.world_system)
-        self.world.register_system(self.vision_system)
-        self.world.register_system(self.verb_system)
-        self.world.register_system(self.ai_system)
-        
-        # Load initial genome and create entities
-        self.genome = self.load_genome()
-        self.evolution = Evolution(Path(__file__).parent / "data")
-        
-        # UI
-        self.hud = HUD(SCREEN_WIDTH, SCREEN_HEIGHT)
-        self.post_run = PostRunScreen(SCREEN_WIDTH, SCREEN_HEIGHT)
-        
+
         # Create initial entities
         self.spawn_entities()
         
@@ -223,10 +204,7 @@ class Game:
         self.state = GameState.POSTRUN
         
         # Record time alive event
-        self.telemetry_system.events.append({
-            "name": "time_alive",
-            "data": {"seconds": self.run_time}
-        })
+        self.telemetry_system.record_time_alive(self.run_time)
         
         # Check for first survival milestone
         if self.run_time >= self.max_run_time:
@@ -241,16 +219,26 @@ class Game:
         
         # Clear old entities
         self.world = World()
-        
-        # Re-register systems
-        self.world.register_system(self.world_system)
-        self.world.register_system(self.vision_system)
-        self.world.register_system(self.verb_system)
-        self.world.register_system(self.ai_system)
-        
+
+        # Regenerate world state and re-register systems
+        self.world_system.reset()
+        for system in (
+            self.world_system,
+            self.vision_system,
+            self.verb_system,
+            self.ai_system,
+        ):
+            self.world.register_system(system)
+
         # Reset telemetry
         self.telemetry_system.clear()
-        
+
+        # Pull the freshly evolved genome
+        self.genome = self.evolution.current_genome
+
+        # Reset the fixed timestep accumulator
+        self.timer.reset()
+
         # Spawn new entities
         self.spawn_entities()
     

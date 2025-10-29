@@ -82,3 +82,4 @@ class System:
     def update(self, dt: float) -> None:
         """Override this to implement system behavior."""
         pass
+

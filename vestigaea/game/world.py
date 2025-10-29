@@ -32,17 +32,23 @@ class WorldSystem(System):
         self.width = width
         self.height = height
         self.num_resources = num_resources
-        
+
         # Initialize tile grid
         self.tiles: List[List[TileType]] = []
         self.generate_terrain()
-        
+
         # Resource management
         self.resources: List[Optional[ResourceNode]] = []
         self.spawn_resources()
-        
+
         # Subscribe to events
         bus.subscribe("forage", self.handle_forage)
+
+    def reset(self) -> None:
+        """Regenerate terrain and respawn resources for a new run."""
+
+        self.generate_terrain()
+        self.spawn_resources()
     
     def generate_terrain(self):
         """Generate world tiles with varying terrain types."""

@@ -1,14 +1,15 @@
-"""
-Utility-based AI for predator behavior in Vestigaea MVP.
-"""
+"""Utility-based AI for predator behavior in Vestigaea MVP."""
+
+from __future__ import annotations
+
 import math
 import random
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
+from typing import List, Optional
 
 from vestigaea.core.ecs import System
 from vestigaea.core.events import bus
-from game.perception import Stimulus
+from vestigaea.game.perception import Stimulus
 
 @dataclass
 class UtilityScore:
@@ -73,7 +74,7 @@ class UtilityAI(System):
         
         return scores
     
-    def execute_action(self, entity_id: int, action: UtilityScore, dt: float):
+    def execute_action(self, entity_id: int, action: UtilityScore, dt: float) -> None:
         """Execute the highest scoring action."""
         transform = self.world.get_component(entity_id, "transform")
         status = self.world.get_component(entity_id, "status")
@@ -100,11 +101,14 @@ class UtilityAI(System):
                 entities = self.world.get_entities_with("player")
                 if entities:
                     player_id = next(iter(entities))
-                    bus.publish("injury", {
-                        "entity_id": player_id,
-                        "severity": 0.3,
-                        "source": entity_id
-                    })
+                    bus.publish(
+                        "injury",
+                        {
+                            "entity_id": player_id,
+                            "severity": 0.3,
+                            "source": entity_id,
+                        },
+                    )
             
             # Move predator
             speed = 140  # Slightly faster than base player speed
@@ -136,8 +140,8 @@ class UtilityAI(System):
             transform["x"] += status["wander_dx"] * speed * dt
             transform["y"] += status["wander_dy"] * speed * dt
             transform["direction"] = math.atan2(
-                status["wander_dy"], 
-                status["wander_dx"]
+                status["wander_dy"],
+                status["wander_dx"],
             )
     
     def update(self, dt: float):
@@ -151,3 +155,4 @@ class UtilityAI(System):
             if scores:
                 best_action = max(scores, key=lambda s: s.score)
                 self.execute_action(entity_id, best_action, dt)
+
