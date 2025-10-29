@@ -1,0 +1,24 @@
+{
+  "morphology": {
+    "size": 0.9
+  },
+  "locomotion": {
+    "type": "wade",
+    "speed": 120
+  },
+  "metabolism": {
+    "rate": 1.0,
+    "stamina_max": 100
+  },
+  "sense": {
+    "vision": {
+      "range": 180,
+      "fov_deg": 110
+    }
+  },
+  "behavior": {
+    "risk_tolerance": 0.3,
+    "memory_span": 2
+  },
+  "verbs": ["move", "forage", "hide"]
+}

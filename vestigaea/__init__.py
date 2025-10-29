@@ -1,0 +1,3 @@
+"""
+Vestigaea MVP initialization
+"""
